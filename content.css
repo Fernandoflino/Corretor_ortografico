@@ -1,0 +1,117 @@
+#corretor-ortografico-btn {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: #202c33;
+  color: #8696a0;
+  cursor: pointer;
+  border-radius: 50%;
+  box-sizing: border-box;
+  z-index: 9999;
+}
+
+#corretor-ortografico-btn:hover {
+  background: #2a3942;
+}
+
+#corretor-ortografico-panel {
+  z-index: 9999;
+  /* largura é sempre definida via JS (createPanel), alinhada à barra
+     de composição — não fixar aqui para não conflitar com aquele
+     cálculo. */
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: #233138;
+  color: #e9edef;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  padding: 16px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+#corretor-ortografico-panel .co-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+#corretor-ortografico-panel .co-loading {
+  color: #8696a0;
+}
+
+#corretor-ortografico-panel .co-error {
+  color: #f15c6d;
+  margin-bottom: 8px;
+}
+
+#corretor-ortografico-panel .co-textarea {
+  width: 100%;
+  min-height: 220px;
+  resize: vertical;
+  background: #2a3942;
+  color: #e9edef;
+  border: 1px solid #3b4a54;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+#corretor-ortografico-panel .co-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+#corretor-ortografico-panel .co-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+#corretor-ortografico-panel .co-btn-primary {
+  background: #00a884;
+  color: #111b21;
+}
+
+#corretor-ortografico-panel .co-btn-primary:hover {
+  background: #06cf9c;
+}
+
+#corretor-ortografico-panel .co-btn-secondary {
+  background: transparent;
+  color: #e9edef;
+}
+
+#corretor-ortografico-panel .co-btn-secondary:hover {
+  background: rgba(233, 237, 239, 0.1);
+}
+
+#corretor-ortografico-panel .co-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#corretor-ortografico-panel .co-menu-item {
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: #e9edef;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#corretor-ortografico-panel .co-menu-item:hover {
+  background: rgba(233, 237, 239, 0.1);
+}

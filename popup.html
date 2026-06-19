@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Corretor Ortográfico - Configurações</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <h1>Corretor Ortográfico</h1>
+
+    <label for="apiKey">Chave de API (OpenRouter)</label>
+    <input id="apiKey" type="password" placeholder="sk-or-v1-..." autocomplete="off" />
+
+    <label for="model">Modelo</label>
+    <input id="model" type="text" placeholder="openai/gpt-4o-mini" />
+
+    <label for="prompt">Prompt de "Revisar"</label>
+    <textarea id="prompt" rows="6"></textarea>
+
+    <label for="rewritePrompt">Prompt de "Reescrever"</label>
+    <textarea id="rewritePrompt" rows="6"></textarea>
+
+    <button id="save">Salvar</button>
+    <span id="status"></span>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
