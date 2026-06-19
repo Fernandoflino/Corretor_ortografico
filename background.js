@@ -62,8 +62,12 @@ const ACTIONS = {
 
 const HIGHLIGHT_INSTRUCTION =
   "\n\nAlém disso, releia o texto e identifique as partes mais importantes (valores, datas, prazos, " +
-  "quantidades, decisões, pedidos de ação) e destaque-as usando negrito (texto entre asteriscos) ou " +
-  "itálico (texto entre underlines), sem exagerar nem destacar tudo.";
+  "quantidades, decisões, pedidos de ação) e destaque-as usando a formatação de texto simples do " +
+  "WhatsApp (não é Markdown):\n" +
+  "- Negrito: APENAS UM asterisco de cada lado, assim: *texto*. NUNCA use dois asteriscos (**texto**), " +
+  "isso é sintaxe de Markdown e não funciona no WhatsApp.\n" +
+  "- Itálico: um underline de cada lado, assim: _texto_.\n" +
+  "Sem exagerar nem destacar tudo.";
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "AI_ACTION") return;
