@@ -9,8 +9,8 @@ const DEFAULT_REVISAR_PROMPT =
   "quantidades, valores), formate-as como lista, cada item em uma linha própria iniciada por \"- \".\n" +
   "- Cole essa lista imediatamente abaixo da frase ou título que a introduz, SEM linha em branco entre eles.\n" +
   "- Mantenha uma linha em branco só entre seções/grupos de assuntos diferentes, nunca dentro do mesmo grupo.\n" +
-  "- Use *negrito* (texto entre asteriscos) para títulos de seção quando fizer sentido, e _itálico_ " +
-  "(texto entre underlines) para destaques pontuais, sem abusar.\n" +
+  "- Não use negrito, itálico ou qualquer outra marcação além do \"- \" das listas, a menos que o " +
+  "texto original já as tivesse.\n" +
   "- Não pule linhas desnecessariamente nem adicione conteúdo novo: só reorganize a formatação " +
   "preservando o conteúdo original.\n\n" +
   "Exemplo de entrada:\n" +
@@ -21,7 +21,7 @@ const DEFAULT_REVISAR_PROMPT =
   "Exemplo de saída esperada:\n" +
   "Sacola de algodão 210 g/m² com 16 fios e alças costuradas na parte interna.\n" +
   "- Altura: 41 cm\n- Largura: 38 cm – com logo do evento.\n\n" +
-  "*IMPRESSÃO MÉDIA*\n" +
+  "IMPRESSÃO MÉDIA\n" +
   "- Quantidade: 4.000 unidades\n- Valor unitário: R$ 16,50\n- Valor total: R$ 66.000,00\n\n" +
   "Não adicione comentários, explicações, aspas ou qualquer texto extra. " +
   "Responda apenas com o texto corrigido.";
@@ -35,8 +35,8 @@ const DEFAULT_REESCREVER_PROMPT =
   "quantidades, valores), formate-as como lista, cada item em uma linha própria iniciada por \"- \".\n" +
   "- Cole essa lista imediatamente abaixo da frase ou título que a introduz, SEM linha em branco entre eles.\n" +
   "- Mantenha uma linha em branco só entre seções/grupos de assuntos diferentes, nunca dentro do mesmo grupo.\n" +
-  "- Use *negrito* (texto entre asteriscos) para títulos de seção quando fizer sentido, e _itálico_ " +
-  "(texto entre underlines) para destaques pontuais, sem abusar.\n" +
+  "- Não use negrito, itálico ou qualquer outra marcação além do \"- \" das listas, a menos que o " +
+  "texto original já as tivesse.\n" +
   "- Não pule linhas desnecessariamente: só reorganize a formatação preservando o sentido original.\n\n" +
   "Exemplo de entrada:\n" +
   "Sacola de algodão 210 g/m² com 16 fios e alças costuradas na parte interna.\n\n" +
@@ -46,7 +46,7 @@ const DEFAULT_REESCREVER_PROMPT =
   "Exemplo de saída esperada:\n" +
   "Sacola de algodão 210 g/m² com 16 fios e alças costuradas na parte interna.\n" +
   "- Altura: 41 cm\n- Largura: 38 cm – com logo do evento.\n\n" +
-  "*IMPRESSÃO MÉDIA*\n" +
+  "IMPRESSÃO MÉDIA\n" +
   "- Quantidade: 4.000 unidades\n- Valor unitário: R$ 16,50\n- Valor total: R$ 66.000,00\n\n" +
   "Não adicione comentários, explicações, aspas ou qualquer texto extra. " +
   "Responda apenas com o texto reescrito.";

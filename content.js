@@ -223,8 +223,25 @@ function createPanel(textbox) {
 function renderMenu(panel, textbox) {
   panel.innerHTML = `
     <div class="co-title">O que você quer fazer?</div>
+    <label class="co-toggle">
+      <input type="checkbox" id="co-highlight-toggle" />
+      Destacar partes importantes (negrito/itálico)
+    </label>
     <div class="co-menu"></div>
   `;
+
+  // Interruptor permanente: uma vez ativado, fica salvo e passa a
+  // valer para toda chamada de Revisar/Reescrever (não só nesta vez) —
+  // por isso lê/grava direto em chrome.storage.sync, sem precisar
+  // reativar a cada uso.
+  const toggle = panel.querySelector("#co-highlight-toggle");
+  chrome.storage.sync.get(["highlightEnabled"], (settings) => {
+    toggle.checked = !!settings.highlightEnabled;
+  });
+  toggle.addEventListener("change", () => {
+    chrome.storage.sync.set({ highlightEnabled: toggle.checked });
+  });
+
   const menuEl = panel.querySelector(".co-menu");
   ACTIONS.forEach((action) => {
     const item = document.createElement("button");
@@ -298,21 +315,31 @@ function renderSuggestion(panel, suggestedText, textbox, resultTitle) {
 
 function requestAction(panel, action, text, textbox) {
   renderLoading(panel, action.loadingText);
-  chrome.runtime.sendMessage({ type: "AI_ACTION", action: action.id, text }, (response) => {
-    if (!currentPanel || currentPanel !== panel) return;
-    if (chrome.runtime.lastError) {
-      renderError(panel, chrome.runtime.lastError.message, () =>
-        requestAction(panel, action, text, textbox)
-      );
-      return;
-    }
-    if (!response?.ok) {
-      renderError(panel, response?.error || "Erro desconhecido.", () =>
-        requestAction(panel, action, text, textbox)
-      );
-      return;
-    }
-    renderSuggestion(panel, response.text, textbox, action.resultTitle);
+
+  // Lê o interruptor de "destacar partes importantes" salvo (em vez de
+  // depender do checkbox do menu inicial, que pode nem estar mais na
+  // tela quando isso roda de novo a partir do botão "Reescrever" da
+  // sugestão) — assim vale para qualquer chamada de IA, sempre.
+  chrome.storage.sync.get(["highlightEnabled"], (settings) => {
+    chrome.runtime.sendMessage(
+      { type: "AI_ACTION", action: action.id, text, highlight: !!settings.highlightEnabled },
+      (response) => {
+        if (!currentPanel || currentPanel !== panel) return;
+        if (chrome.runtime.lastError) {
+          renderError(panel, chrome.runtime.lastError.message, () =>
+            requestAction(panel, action, text, textbox)
+          );
+          return;
+        }
+        if (!response?.ok) {
+          renderError(panel, response?.error || "Erro desconhecido.", () =>
+            requestAction(panel, action, text, textbox)
+          );
+          return;
+        }
+        renderSuggestion(panel, response.text, textbox, action.resultTitle);
+      }
+    );
   });
 }
 

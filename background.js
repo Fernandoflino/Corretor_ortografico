@@ -13,8 +13,8 @@ const ACTIONS = {
       "quantidades, valores), formate-as como lista, cada item em uma linha própria iniciada por \"- \".\n" +
       "- Cole essa lista imediatamente abaixo da frase ou título que a introduz, SEM linha em branco entre eles.\n" +
       "- Mantenha uma linha em branco só entre seções/grupos de assuntos diferentes, nunca dentro do mesmo grupo.\n" +
-      "- Use *negrito* (texto entre asteriscos) para títulos de seção quando fizer sentido, e _itálico_ " +
-      "(texto entre underlines) para destaques pontuais, sem abusar.\n" +
+      "- Não use negrito, itálico ou qualquer outra marcação além do \"- \" das listas, a menos que o " +
+      "texto original já as tivesse.\n" +
       "- Não pule linhas desnecessariamente nem adicione conteúdo novo: só reorganize a formatação " +
       "preservando o conteúdo original.\n\n" +
       "Exemplo de entrada:\n" +
@@ -25,7 +25,7 @@ const ACTIONS = {
       "Exemplo de saída esperada:\n" +
       "Sacola de algodão 210 g/m² com 16 fios e alças costuradas na parte interna.\n" +
       "- Altura: 41 cm\n- Largura: 38 cm – com logo do evento.\n\n" +
-      "*IMPRESSÃO MÉDIA*\n" +
+      "IMPRESSÃO MÉDIA\n" +
       "- Quantidade: 4.000 unidades\n- Valor unitário: R$ 16,50\n- Valor total: R$ 66.000,00\n\n" +
       "Não adicione comentários, explicações, aspas ou qualquer texto extra. " +
       "Responda apenas com o texto corrigido.",
@@ -42,8 +42,8 @@ const ACTIONS = {
       "quantidades, valores), formate-as como lista, cada item em uma linha própria iniciada por \"- \".\n" +
       "- Cole essa lista imediatamente abaixo da frase ou título que a introduz, SEM linha em branco entre eles.\n" +
       "- Mantenha uma linha em branco só entre seções/grupos de assuntos diferentes, nunca dentro do mesmo grupo.\n" +
-      "- Use *negrito* (texto entre asteriscos) para títulos de seção quando fizer sentido, e _itálico_ " +
-      "(texto entre underlines) para destaques pontuais, sem abusar.\n" +
+      "- Não use negrito, itálico ou qualquer outra marcação além do \"- \" das listas, a menos que o " +
+      "texto original já as tivesse.\n" +
       "- Não pule linhas desnecessariamente: só reorganize a formatação preservando o sentido original.\n\n" +
       "Exemplo de entrada:\n" +
       "Sacola de algodão 210 g/m² com 16 fios e alças costuradas na parte interna.\n\n" +
@@ -53,24 +53,29 @@ const ACTIONS = {
       "Exemplo de saída esperada:\n" +
       "Sacola de algodão 210 g/m² com 16 fios e alças costuradas na parte interna.\n" +
       "- Altura: 41 cm\n- Largura: 38 cm – com logo do evento.\n\n" +
-      "*IMPRESSÃO MÉDIA*\n" +
+      "IMPRESSÃO MÉDIA\n" +
       "- Quantidade: 4.000 unidades\n- Valor unitário: R$ 16,50\n- Valor total: R$ 66.000,00\n\n" +
       "Não adicione comentários, explicações, aspas ou qualquer texto extra. " +
       "Responda apenas com o texto reescrito.",
   },
 };
 
+const HIGHLIGHT_INSTRUCTION =
+  "\n\nAlém disso, releia o texto e identifique as partes mais importantes (valores, datas, prazos, " +
+  "quantidades, decisões, pedidos de ação) e destaque-as usando negrito (texto entre asteriscos) ou " +
+  "itálico (texto entre underlines), sem exagerar nem destacar tudo.";
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "AI_ACTION") return;
 
-  runAction(message.action, message.text)
+  runAction(message.action, message.text, !!message.highlight)
     .then((result) => sendResponse({ ok: true, text: result }))
     .catch((error) => sendResponse({ ok: false, error: error.message }));
 
   return true;
 });
 
-async function runAction(action, text) {
+async function runAction(action, text, highlight) {
   const config = ACTIONS[action];
   if (!config) {
     throw new Error(`Ação desconhecida: ${action}`);
@@ -90,7 +95,10 @@ async function runAction(action, text) {
   }
 
   const model = settings.openrouterModel || DEFAULT_MODEL;
-  const prompt = settings[config.promptKey] || config.defaultPrompt;
+  let prompt = settings[config.promptKey] || config.defaultPrompt;
+  if (highlight) {
+    prompt += HIGHLIGHT_INSTRUCTION;
+  }
 
   // Sem timeout, uma requisição que trave (rede, modelo sobrecarregado,
   // service worker suspenso) deixava o painel "Aguarde um instante"

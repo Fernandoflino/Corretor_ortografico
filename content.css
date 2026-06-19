@@ -39,6 +39,20 @@
   margin-bottom: 8px;
 }
 
+#corretor-ortografico-panel .co-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #8696a0;
+  font-size: 13px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+#corretor-ortografico-panel .co-toggle input {
+  cursor: pointer;
+}
+
 #corretor-ortografico-panel .co-loading {
   color: #8696a0;
 }
