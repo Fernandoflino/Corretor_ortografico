@@ -19,17 +19,26 @@
 
 #corretor-ortografico-panel {
   z-index: 9999;
-  /* largura é sempre definida via JS (createPanel), alinhada à barra
-     de composição — não fixar aqui para não conflitar com aquele
-     cálculo. */
-  max-width: 90vw;
+
+  width: inherit;
+  max-width: none;
+
+  margin-left: 12px;
+  margin-right: 12px;
+
+  box-sizing: border-box;
+
   max-height: 80vh;
   overflow-y: auto;
-  background: #233138;
+
+  background: #242626;
   color: #e9edef;
-  border-radius: 8px;
+
+  border-radius: 15px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+
   padding: 16px;
+
   font-family: inherit;
   font-size: 14px;
 }
