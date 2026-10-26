@@ -69,7 +69,23 @@ const HIGHLIGHT_INSTRUCTION =
   "- Itálico: um underline de cada lado, assim: _texto_.\n" +
   "Sem exagerar nem destacar tudo.";
 
+const DETECT_PROMPT =
+  "Você recebe o HTML estrutural (sem textos) do rodapé de uma conversa do WhatsApp Web. " +
+  "Descubra um seletor CSS para a caixa de digitação da mensagem (elemento editável) e outro para o " +
+  "botão de enviar. Responda APENAS com JSON, sem comentários nem cercas de código, neste formato: " +
+  '{"textbox":"<seletor>","send":"<seletor>"}. ' +
+  "Regras: use somente os atributos contenteditable, role, aria-label, data-testid e data-tab; nunca use " +
+  "classes CSS nem nomes de ícones; cada seletor deve casar com exatamente um elemento do HTML recebido. " +
+  'Se não houver botão de enviar identificável, use "" em "send".';
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === "AI_DETECT") {
+    detectSelectors(message.html)
+      .then((selectors) => sendResponse({ ok: true, selectors }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
   if (message?.type !== "AI_ACTION") return;
 
   runAction(message.action, message.text, !!message.highlight)
@@ -85,11 +101,37 @@ async function runAction(action, text, highlight) {
     throw new Error(`Ação desconhecida: ${action}`);
   }
 
-  const settings = await chrome.storage.sync.get([
-    "openrouterApiKey",
-    "openrouterModel",
-    config.promptKey,
-  ]);
+  const settings = await chrome.storage.sync.get([config.promptKey]);
+  let prompt = settings[config.promptKey] || config.defaultPrompt;
+  if (highlight) {
+    prompt += HIGHLIGHT_INSTRUCTION;
+  }
+
+  return callModel(prompt, text);
+}
+
+async function detectSelectors(html) {
+  if (!html || typeof html !== "string") {
+    throw new Error("Nenhuma estrutura recebida para analisar.");
+  }
+  const raw = await callModel(DETECT_PROMPT, html);
+  const match = raw.match(/\{[\s\S]*\}/);
+  let parsed;
+  try {
+    parsed = JSON.parse(match ? match[0] : raw);
+  } catch (err) {
+    throw new Error("A IA não devolveu um JSON válido. Tente novamente.");
+  }
+  const textbox = typeof parsed.textbox === "string" ? parsed.textbox.trim() : "";
+  const send = typeof parsed.send === "string" ? parsed.send.trim() : "";
+  if (!textbox) {
+    throw new Error("A IA não encontrou a caixa de mensagem.");
+  }
+  return { textbox, send };
+}
+
+async function callModel(prompt, userContent) {
+  const settings = await chrome.storage.sync.get(["openrouterApiKey", "openrouterModel"]);
 
   const apiKey = settings.openrouterApiKey;
   if (!apiKey) {
@@ -99,10 +141,6 @@ async function runAction(action, text, highlight) {
   }
 
   const model = settings.openrouterModel || DEFAULT_MODEL;
-  let prompt = settings[config.promptKey] || config.defaultPrompt;
-  if (highlight) {
-    prompt += HIGHLIGHT_INSTRUCTION;
-  }
 
   // Sem timeout, uma requisição que trave (rede, modelo sobrecarregado,
   // service worker suspenso) deixava o painel "Aguarde um instante"
@@ -123,7 +161,7 @@ async function runAction(action, text, highlight) {
         model,
         messages: [
           { role: "system", content: prompt },
-          { role: "user", content: text },
+          { role: "user", content: userContent },
         ],
       }),
       signal: controller.signal,
@@ -151,3 +189,18 @@ async function runAction(action, text, highlight) {
 
   return result;
 }
+
+// Marca o ícone da extensão com "!" enquanto os seletores não foram
+// detectados (primeiro uso): o lápis só aparece depois de "Detectar com IA".
+function updateBadge() {
+  chrome.storage.sync.get(["textboxSelector"], (settings) => {
+    chrome.action.setBadgeText({ text: settings.textboxSelector ? "" : "!" });
+    chrome.action.setBadgeBackgroundColor({ color: "#d93025" });
+  });
+}
+
+chrome.runtime.onInstalled.addListener(updateBadge);
+chrome.runtime.onStartup.addListener(updateBadge);
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "sync" && changes.textboxSelector) updateBadge();
+});

@@ -62,3 +62,43 @@ button:hover {
   text-align: center;
   min-height: 14px;
 }
+
+details {
+  margin-top: 16px;
+  font-size: 12px;
+}
+
+summary {
+  cursor: pointer;
+  color: #8696a0;
+}
+
+.help {
+  color: #8696a0;
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 8px 0 0;
+}
+
+ol.help {
+  padding-left: 18px;
+}
+
+button.secondary {
+  background: #2a3942;
+  color: #e9edef;
+  margin-top: 8px;
+}
+
+button.secondary:hover {
+  background: #3b4a54;
+}
+
+#detectStatus,
+#detectAIStatus {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #8696a0;
+  min-height: 14px;
+}

@@ -2,14 +2,6 @@ const LOG_PREFIX = "[CorretorOrtografico]";
 const BUTTON_ID = "corretor-ortografico-btn";
 const PANEL_ID = "corretor-ortografico-panel";
 
-const ACTION_ICON_SELECTOR = [
-  'span[data-icon="send"]',
-  'span[data-icon="ptt"]',
-  'span[data-icon="wds-ic-send-filled"]',
-  'span[data-icon="wds-ic-mic-filled"]',
-  'span[data-icon="mic"]',
-].join(",");
-
 const PENCIL_SVG = `
 <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
   <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
@@ -34,18 +26,35 @@ let observer = null;
 let currentPanel = null;
 let btnEl = null;
 
-const ACTION_LABEL_SELECTOR = [
-  'button[data-tab="11"]',
-  'button[aria-label*="nviar" i]',
-  'button[aria-label*="send" i]',
-  'button[aria-label*="voz" i]',
-  'button[aria-label*="voice" i]',
-  'button[aria-label*="microfone" i]',
-  '[role="button"][aria-label*="nviar" i]',
-  '[role="button"][aria-label*="send" i]',
-  '[role="button"][aria-label*="voz" i]',
-  '[role="button"][aria-label*="voice" i]',
-].join(",");
+// Os seletores da página do WhatsApp não ficam no código: são descobertos
+// pelo botão "Detectar com IA" do popup e salvos em chrome.storage.sync.
+// Sem eles, o lápis não aparece.
+const custom = { textbox: "", send: "" };
+
+function applyCustomSelectors(settings) {
+  custom.textbox = (settings.textboxSelector || "").trim();
+  custom.send = (settings.sendSelector || "").trim();
+}
+
+chrome.storage.sync.get(["textboxSelector", "sendSelector"], applyCustomSelectors);
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "sync") return;
+  if (changes.textboxSelector) custom.textbox = (changes.textboxSelector.newValue || "").trim();
+  if (changes.sendSelector) custom.send = (changes.sendSelector.newValue || "").trim();
+  positionButton();
+});
+
+function queryCustom(selector) {
+  if (!selector) return null;
+  try {
+    return (
+      [...document.querySelectorAll(selector)].find((el) => !el.closest("#side") && isVisible(el)) || null
+    );
+  } catch (err) {
+    warnOnce("badselector:" + selector, "Seletor salvo inválido:", selector);
+    return null;
+  }
+}
 
 function isVisible(el) {
   const r = el.getBoundingClientRect();
@@ -53,7 +62,7 @@ function isVisible(el) {
 }
 
 // Evita inundar o console: o MutationObserver chama positionButton()
-// o tempo todo, então só avisa quando o estado de "não achei" muda.
+// o tempo todo, então só avisa uma vez.
 const warned = new Set();
 function warnOnce(key, ...args) {
   if (warned.has(key)) return;
@@ -62,48 +71,11 @@ function warnOnce(key, ...args) {
 }
 
 function findComposeTextbox() {
-  const strict = document.querySelector('footer div[contenteditable="true"][role="textbox"]');
-  if (strict) return strict;
-
-  // Fallback: qualquer caixa de texto editável fora do painel lateral
-  // (a busca de conversas também é contenteditable).
-  const candidates = [
-    ...document.querySelectorAll('div[contenteditable="true"][role="textbox"], div[contenteditable="true"][data-tab]'),
-  ].filter((el) => !el.closest("#side") && isVisible(el));
-  const found = candidates[candidates.length - 1] || null;
-  if (!found) warnOnce("textbox", "Caixa de mensagem não encontrada (seletores desatualizados?).");
-  return found;
+  return queryCustom(custom.textbox);
 }
 
 function findActionButton() {
-  const icon = document.querySelector(ACTION_ICON_SELECTOR);
-  if (icon) {
-    const btn = icon.closest('button, div[role="button"], [role="button"], [tabindex]');
-    if (btn) return btn;
-  }
-
-  const textbox = findComposeTextbox();
-  const scope = (textbox && (textbox.closest("footer") || textbox.closest("#main"))) || document;
-
-  // Fallback 1: rótulo acessível (aria-label) de enviar / mensagem de voz.
-  const byLabel = [...scope.querySelectorAll(ACTION_LABEL_SELECTOR)].filter(isVisible);
-  if (byLabel.length) return byLabel[byLabel.length - 1];
-
-  // Fallback 2: estrutural — o botão clicável mais à direita, à direita
-  // do campo de texto, na mesma linha dele.
-  if (textbox) {
-    const tr = textbox.getBoundingClientRect();
-    const right = [...scope.querySelectorAll('button, [role="button"]')].filter((el) => {
-      if (!isVisible(el) || el.id === BUTTON_ID) return false;
-      const r = el.getBoundingClientRect();
-      return r.left >= tr.right - 4 && r.top < tr.bottom && r.bottom > tr.top;
-    });
-    right.sort((a, b) => b.getBoundingClientRect().left - a.getBoundingClientRect().left);
-    if (right[0]) return right[0];
-  }
-
-  warnOnce("action", "Botão de enviar/mic não encontrado (seletores desatualizados?).");
-  return null;
+  return queryCustom(custom.send);
 }
 
 // O botão de mic/enviar do WhatsApp fica dentro de um contêiner com
@@ -122,8 +94,10 @@ function ensureButton() {
   btnEl.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    const textbox = findComposeTextbox();
-    if (textbox) handlePencilClick(textbox);
+    // Busca a caixa na hora do clique (não usa referência guardada),
+    // porque o WhatsApp pode ter redesenhado a tela desde o último
+    // posicionamento do botão.
+    handlePencilClick(findComposeTextbox());
   });
 
   document.body.appendChild(btnEl);
@@ -135,18 +109,26 @@ function positionButton() {
   const textbox = findComposeTextbox();
   const btn = ensureButton();
 
-  if (!actionButton || !textbox) {
-    btn.style.display = "none";
-    return;
-  }
-
-  const rect = actionButton.getBoundingClientRect();
-  if (rect.width === 0 && rect.height === 0) {
+  // Sem caixa de mensagem não há conversa aberta: esconde o botão.
+  if (!textbox) {
     btn.style.display = "none";
     return;
   }
 
   const size = 32;
+
+  // Sem o botão de enviar/mic (seletores desatualizados), mantém o lápis
+  // visível encostado à direita da caixa de mensagem, em vez de sumir.
+  // A busca de verdade acontece no clique.
+  let rect = actionButton ? actionButton.getBoundingClientRect() : null;
+  if (!rect || (rect.width === 0 && rect.height === 0)) {
+    const tr = textbox.getBoundingClientRect();
+    if (tr.width === 0 && tr.height === 0) {
+      btn.style.display = "none";
+      return;
+    }
+    rect = { left: tr.right, top: tr.top, height: Math.max(tr.height, size) };
+  }
 
   // A largura do contenteditable é a coluna inteira disponível (não o
   // texto digitado em si), então usar a borda direita dele como limite
@@ -249,17 +231,19 @@ function createPanel(textbox) {
 
   const panel = document.createElement("div");
   panel.id = PANEL_ID;
+  const margin = 8;
 
   // Alinha o painel acima da barra de composição. Em vez de usar a
   // largura da "footer" (que pode incluir área reservada pra barra de
   // rolagem da lista de mensagens), usamos a borda direita do próprio
   // botão de enviar/mic como limite — ele é garantidamente visível
   // dentro da coluna de conversa, sem sobrepor nada.
-  const bar = textbox.closest("footer") || textbox;
-  const rect = bar.getBoundingClientRect();
+  const bar = textbox ? textbox.closest("footer") || textbox : null;
+  const rect = bar
+    ? bar.getBoundingClientRect()
+    : { left: margin, right: window.innerWidth - margin, top: window.innerHeight - 80 };
   const actionButton = findActionButton();
   const actionRect = actionButton ? actionButton.getBoundingClientRect() : null;
-  const margin = 8;
   const left = Math.max(margin, rect.left);
   const rightBound = actionRect ? actionRect.right : rect.right;
   const right = Math.min(rightBound, window.innerWidth - margin);
@@ -404,7 +388,152 @@ function requestAction(panel, action, text, textbox) {
   });
 }
 
+// Equivalente ao comando de console usado para diagnóstico manual
+// (copiar o HTML do rodapé), mas só com a estrutura: remove texto das
+// mensagens e classes, para não vazar conversa nem poluir o log.
+const SNAPSHOT_MAX_CHARS = 20000;
+const STRIPPED_ATTRIBUTES = ["class", "style", "src", "href", "alt", "title", "value"];
+
+// Só a estrutura do rodapé: sem texto de mensagens, sem classes (geradas
+// e instáveis) e sem atributos que possam trazer dados pessoais. O
+// aria-label do campo de texto traz o nome do contato/grupo, então sai.
+function getComposerSnapshot() {
+  // Não pode depender dos seletores salvos (é justamente o que está sendo
+  // descoberto): pega o último campo editável visível fora do painel lateral
+  // (a busca de conversas também é contenteditable).
+  const box =
+    [...document.querySelectorAll('[contenteditable="true"]')]
+      .filter((el) => !el.closest("#side") && isVisible(el))
+      .pop() || null;
+  const main = document.querySelector("#main");
+  let root = null;
+  if (box) {
+    root = box.closest("footer");
+    // Sem <footer>: sobe até a linha que contém a caixa e os botões.
+    for (let i = 0, el = box; !root && i < 4 && el.parentElement; i++) {
+      el = el.parentElement;
+      if (i === 3) root = el;
+    }
+  }
+  // Sem achar a caixa, o rodapé costuma ser o último filho de #main.
+  root = root || main?.querySelector("footer") || main?.lastElementChild || document.querySelector("footer");
+  if (!root) return "";
+
+  const clone = root.cloneNode(true);
+  const walker = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT);
+  const texts = [];
+  while (walker.nextNode()) texts.push(walker.currentNode);
+  texts.forEach((t) => t.remove());
+  clone.querySelectorAll("*").forEach((el) => {
+    STRIPPED_ATTRIBUTES.forEach((attr) => el.removeAttribute(attr));
+    if (el.hasAttribute("contenteditable")) el.removeAttribute("aria-label");
+  });
+  return clone.outerHTML.slice(0, SNAPSHOT_MAX_CHARS);
+}
+
+function validateSelector(selector, { allowSide }) {
+  try {
+    return [...document.querySelectorAll(selector)].some(
+      (el) => isVisible(el) && (allowSide || !el.closest("#side"))
+    );
+  } catch (err) {
+    return false;
+  }
+}
+
+// Pede à IA os seletores a partir da estrutura do rodapé, confere se eles
+// realmente acham algo na página viva e só então salva.
+function detectSelectorsWithAI() {
+  return new Promise((resolve, reject) => {
+    const snapshot = getComposerSnapshot();
+    if (!snapshot) {
+      console.warn(LOG_PREFIX, "Rodapé não encontrado. #main:", !!document.querySelector("#main"),
+        "| footer:", document.querySelectorAll("footer").length,
+        "| contenteditable:", document.querySelectorAll('[contenteditable="true"]').length);
+      reject(new Error("Não encontrei o rodapé da conversa. Abra uma conversa, clique no campo de mensagem e tente de novo."));
+      return;
+    }
+    chrome.runtime.sendMessage({ type: "AI_DETECT", html: snapshot }, (response) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+      if (!response?.ok) {
+        reject(new Error(response?.error || "Erro desconhecido."));
+        return;
+      }
+      const { textbox, send } = response.selectors;
+      if (!validateSelector(textbox, { allowSide: false })) {
+        reject(new Error(`A IA sugeriu um seletor que não funciona para a caixa de mensagem: ${textbox}`));
+        return;
+      }
+      // O botão de enviar é opcional: o lápis tem posição de reserva.
+      const sendOk = send && validateSelector(send, { allowSide: false });
+      const toSave = { textboxSelector: textbox, sendSelector: sendOk ? send : "" };
+      chrome.storage.sync.set(toSave, () => {
+        applyCustomSelectors(toSave);
+        positionButton();
+        resolve({ textbox: toSave.textboxSelector, send: toSave.sendSelector });
+      });
+    });
+  });
+}
+
+function renderDetectResult(panel, result) {
+  panel.innerHTML = `
+    <div class="co-title">Seletores salvos</div>
+    <div class="co-loading">Caixa de mensagem: <code class="co-code-textbox"></code></div>
+    <div class="co-loading">Botão de enviar: <code class="co-code-send"></code></div>
+    <div class="co-actions">
+      <button class="co-btn co-btn-primary" data-action="close">Fechar</button>
+    </div>
+  `;
+  panel.querySelector(".co-code-textbox").textContent = result.textbox;
+  panel.querySelector(".co-code-send").textContent = result.send || "(não confirmado; usando posição automática)";
+  panel.querySelector('[data-action="close"]').addEventListener("click", closePanel);
+}
+
+function runDetection(panel) {
+  renderLoading(panel, "Detectando com IA...");
+  detectSelectorsWithAI()
+    .then((result) => {
+      if (currentPanel !== panel) return;
+      renderDetectResult(panel, result);
+    })
+    .catch((error) => {
+      if (currentPanel !== panel) return;
+      renderError(panel, error.message, () => runDetection(panel));
+    });
+}
+
+// Chamado pelo popup ("Detectar com IA") sem precisar do painel do lápis.
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type !== "DETECT_SELECTORS") return;
+  detectSelectorsWithAI()
+    .then((result) => sendResponse({ ok: true, ...result }))
+    .catch((error) => sendResponse({ ok: false, error: error.message }));
+  return true;
+});
+
+function renderNotFound(panel) {
+  panel.innerHTML = `
+    <div class="co-title">Não encontrei a caixa de mensagem</div>
+    <div class="co-loading">O WhatsApp pode ter mudado a página. A IA pode descobrir os novos seletores a partir da estrutura do rodapé (sem enviar o texto das conversas).</div>
+    <div class="co-actions">
+      <button class="co-btn co-btn-secondary" data-action="cancel">Fechar</button>
+      <button class="co-btn co-btn-primary" data-action="detect">Detectar com IA</button>
+    </div>
+  `;
+  panel.querySelector('[data-action="cancel"]').addEventListener("click", closePanel);
+  panel.querySelector('[data-action="detect"]').addEventListener("click", () => runDetection(panel));
+}
+
 function handlePencilClick(textbox) {
+  if (!textbox) {
+    const panel = createPanel(null);
+    renderNotFound(panel);
+    return;
+  }
   const text = readTextboxText(textbox);
   if (!text.trim()) return;
 

@@ -20,6 +20,44 @@
     <label for="rewritePrompt">Prompt de "Reescrever"</label>
     <textarea id="rewritePrompt" rows="6"></textarea>
 
+    <details id="advanced" open>
+      <summary>Botão de correção no WhatsApp</summary>
+      <p class="help">
+        Na primeira vez (e sempre que o lápis sumir, porque o WhatsApp mudou a página) é preciso detectar
+        onde ele deve aparecer:
+      </p>
+      <ol class="help">
+        <li>Configure a chave de API acima e clique em "Salvar".</li>
+        <li>Abra o WhatsApp Web, uma conversa, e <b>digite algum texto</b> no campo de mensagem.</li>
+        <li>Clique em "Detectar com IA" abaixo. Os seletores aparecem nos campos e já ficam salvos.</li>
+      </ol>
+
+      <button id="detectAI" type="button" class="secondary">Detectar com IA</button>
+      <span id="detectAIStatus"></span>
+      <p class="help">
+        A IA recebe só a estrutura do rodapé (sem textos de mensagens, nomes nem classes) e o resultado
+        é conferido na página antes de salvar.
+      </p>
+
+      <label for="textboxSelector">Seletor da caixa de mensagem</label>
+      <input id="textboxSelector" type="text" placeholder="preenchido por Detectar com IA" />
+
+      <label for="sendSelector">Seletor do botão de enviar</label>
+      <input id="sendSelector" type="text" placeholder="preenchido por Detectar com IA" />
+      <p class="help">Preenchidos pela detecção com IA. Sem eles, o botão de correção não aparece.</p>
+
+      <details id="manual">
+        <summary>Alternativa manual: colar o HTML</summary>
+        <p class="help">
+          Só se a detecção automática falhar: no WhatsApp Web, clique com o botão direito no campo de
+          mensagem → Inspecionar, suba até o &lt;footer&gt;, botão direito → Copy → Copy outerHTML e cole abaixo.
+        </p>
+        <textarea id="htmlPaste" rows="4" placeholder="Cole aqui o HTML copiado"></textarea>
+        <button id="detect" type="button" class="secondary">Ler seletores do HTML colado</button>
+        <span id="detectStatus"></span>
+      </details>
+    </details>
+
     <button id="save">Salvar</button>
     <span id="status"></span>
 

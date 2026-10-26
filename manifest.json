@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Corretor Ortográfico para WhatsApp Web",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Adiciona um botão de correção ortográfica via IA (OpenRouter) ao lado do microfone no WhatsApp Web.",
   "permissions": ["storage"],
   "host_permissions": [
