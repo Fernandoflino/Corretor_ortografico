@@ -1,3 +1,4 @@
+const LOG_PREFIX = "[CorretorOrtografico]";
 const BUTTON_ID = "corretor-ortografico-btn";
 const PANEL_ID = "corretor-ortografico-panel";
 
@@ -33,14 +34,76 @@ let observer = null;
 let currentPanel = null;
 let btnEl = null;
 
-function findActionButton() {
-  const icon = document.querySelector(ACTION_ICON_SELECTOR);
-  if (!icon) return null;
-  return icon.closest('button, div[role="button"]');
+const ACTION_LABEL_SELECTOR = [
+  'button[data-tab="11"]',
+  'button[aria-label*="nviar" i]',
+  'button[aria-label*="send" i]',
+  'button[aria-label*="voz" i]',
+  'button[aria-label*="voice" i]',
+  'button[aria-label*="microfone" i]',
+  '[role="button"][aria-label*="nviar" i]',
+  '[role="button"][aria-label*="send" i]',
+  '[role="button"][aria-label*="voz" i]',
+  '[role="button"][aria-label*="voice" i]',
+].join(",");
+
+function isVisible(el) {
+  const r = el.getBoundingClientRect();
+  return r.width > 0 && r.height > 0;
+}
+
+// Evita inundar o console: o MutationObserver chama positionButton()
+// o tempo todo, então só avisa quando o estado de "não achei" muda.
+const warned = new Set();
+function warnOnce(key, ...args) {
+  if (warned.has(key)) return;
+  warned.add(key);
+  console.warn(LOG_PREFIX, ...args);
 }
 
 function findComposeTextbox() {
-  return document.querySelector('footer div[contenteditable="true"][role="textbox"]');
+  const strict = document.querySelector('footer div[contenteditable="true"][role="textbox"]');
+  if (strict) return strict;
+
+  // Fallback: qualquer caixa de texto editável fora do painel lateral
+  // (a busca de conversas também é contenteditable).
+  const candidates = [
+    ...document.querySelectorAll('div[contenteditable="true"][role="textbox"], div[contenteditable="true"][data-tab]'),
+  ].filter((el) => !el.closest("#side") && isVisible(el));
+  const found = candidates[candidates.length - 1] || null;
+  if (!found) warnOnce("textbox", "Caixa de mensagem não encontrada (seletores desatualizados?).");
+  return found;
+}
+
+function findActionButton() {
+  const icon = document.querySelector(ACTION_ICON_SELECTOR);
+  if (icon) {
+    const btn = icon.closest('button, div[role="button"], [role="button"], [tabindex]');
+    if (btn) return btn;
+  }
+
+  const textbox = findComposeTextbox();
+  const scope = (textbox && (textbox.closest("footer") || textbox.closest("#main"))) || document;
+
+  // Fallback 1: rótulo acessível (aria-label) de enviar / mensagem de voz.
+  const byLabel = [...scope.querySelectorAll(ACTION_LABEL_SELECTOR)].filter(isVisible);
+  if (byLabel.length) return byLabel[byLabel.length - 1];
+
+  // Fallback 2: estrutural — o botão clicável mais à direita, à direita
+  // do campo de texto, na mesma linha dele.
+  if (textbox) {
+    const tr = textbox.getBoundingClientRect();
+    const right = [...scope.querySelectorAll('button, [role="button"]')].filter((el) => {
+      if (!isVisible(el) || el.id === BUTTON_ID) return false;
+      const r = el.getBoundingClientRect();
+      return r.left >= tr.right - 4 && r.top < tr.bottom && r.bottom > tr.top;
+    });
+    right.sort((a, b) => b.getBoundingClientRect().left - a.getBoundingClientRect().left);
+    if (right[0]) return right[0];
+  }
+
+  warnOnce("action", "Botão de enviar/mic não encontrado (seletores desatualizados?).");
+  return null;
 }
 
 // O botão de mic/enviar do WhatsApp fica dentro de um contêiner com
@@ -101,8 +164,6 @@ function positionButton() {
 function readTextboxText(textbox) {
   return textbox.innerText.replace(/\n+$/, "");
 }
-
-const LOG_PREFIX = "[CorretorOrtografico]";
 
 function dispatchCtrlA(el) {
   const opts = { key: "a", code: "KeyA", ctrlKey: true, bubbles: true, cancelable: true };
