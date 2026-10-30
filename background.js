@@ -88,14 +88,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message?.type !== "AI_ACTION") return;
 
-  runAction(message.action, message.text, !!message.highlight)
+  runAction(message.action, message.text, !!message.highlight, message.extraInstruction)
     .then((result) => sendResponse({ ok: true, text: result }))
     .catch((error) => sendResponse({ ok: false, error: error.message }));
 
   return true;
 });
 
-async function runAction(action, text, highlight) {
+async function runAction(action, text, highlight, extraInstruction = "") {
   const config = ACTIONS[action];
   if (!config) {
     throw new Error(`Ação desconhecida: ${action}`);
@@ -105,6 +105,11 @@ async function runAction(action, text, highlight) {
   let prompt = settings[config.promptKey] || config.defaultPrompt;
   if (highlight) {
     prompt += HIGHLIGHT_INSTRUCTION;
+  }
+  if (typeof extraInstruction === "string" && extraInstruction.trim()) {
+    prompt +=
+      "\n\nInstrução adicional para esta resposta (aplique junto às regras anteriores):\n" +
+      extraInstruction.trim();
   }
 
   return callModel(prompt, text);

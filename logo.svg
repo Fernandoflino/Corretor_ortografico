@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Corretor Ortográfico">
+  <rect width="512" height="512" rx="62" fill="#006b55"/>
+  <path d="M255 73c-95 0-172 72-172 161 0 35 12 67 33 93l-28 79 76-30c26 13 57 20 91 20 95 0 172-72 172-161S350 73 255 73Z"
+    fill="none" stroke="#fff" stroke-width="29" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m173 248 49 51 118-121" fill="none" stroke="#35e850" stroke-width="41" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

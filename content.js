@@ -325,18 +325,26 @@ function renderError(panel, message, onRetry) {
   panel.querySelector('[data-action="retry"]').addEventListener("click", onRetry);
 }
 
-function renderSuggestion(panel, suggestedText, textbox, resultTitle) {
+function renderSuggestion(panel, suggestedText, textbox, action, extraInstruction = "") {
   panel.innerHTML = `
-    <div class="co-title">${resultTitle}</div>
+    <div class="co-title">${action.resultTitle}</div>
     <textarea class="co-textarea"></textarea>
+    <div class="co-extra-prompt">
+      <label class="co-extra-label" for="co-extra-instruction">Instrução extra para a IA</label>
+      <div class="co-extra-help">Diga o que quer mudar e clique em “Pensar novamente”.</div>
+      <textarea id="co-extra-instruction" class="co-instruction" rows="2" placeholder="Ex.: deixe a mensagem mais formal e mantenha o tom cordial."></textarea>
+    </div>
     <div class="co-actions">
       <button class="co-btn co-btn-secondary" data-action="cancel">Cancelar</button>
       <button class="co-btn co-btn-secondary" data-action="rewrite">Reescrever</button>
+      <button class="co-btn co-btn-secondary co-btn-think" data-action="think">Pensar novamente</button>
       <button class="co-btn co-btn-primary" data-action="apply">Aplicar</button>
     </div>
   `;
   const textarea = panel.querySelector(".co-textarea");
   textarea.value = suggestedText;
+  const instructionInput = panel.querySelector(".co-instruction");
+  instructionInput.value = extraInstruction;
 
   panel.querySelector('[data-action="cancel"]').addEventListener("click", closePanel);
   panel.querySelector('[data-action="rewrite"]').addEventListener("click", () => {
@@ -346,6 +354,11 @@ function renderSuggestion(panel, suggestedText, textbox, resultTitle) {
     if (!currentText.trim()) return;
     const rewriteAction = ACTIONS.find((a) => a.id === "reescrever");
     requestAction(panel, rewriteAction, currentText, textbox);
+  });
+  panel.querySelector('[data-action="think"]').addEventListener("click", () => {
+    const currentText = textarea.value;
+    if (!currentText.trim()) return;
+    requestAction(panel, action, currentText, textbox, instructionInput.value.trim());
   });
   panel.querySelector('[data-action="apply"]').addEventListener("click", () => {
     console.log(LOG_PREFIX, "Botão Aplicar clicado.");
@@ -358,7 +371,7 @@ function renderSuggestion(panel, suggestedText, textbox, resultTitle) {
   });
 }
 
-function requestAction(panel, action, text, textbox) {
+function requestAction(panel, action, text, textbox, extraInstruction = "") {
   renderLoading(panel, action.loadingText);
 
   // Lê o interruptor de "destacar partes importantes" salvo (em vez de
@@ -367,22 +380,28 @@ function requestAction(panel, action, text, textbox) {
   // sugestão) — assim vale para qualquer chamada de IA, sempre.
   chrome.storage.sync.get(["highlightEnabled"], (settings) => {
     chrome.runtime.sendMessage(
-      { type: "AI_ACTION", action: action.id, text, highlight: !!settings.highlightEnabled },
+      {
+        type: "AI_ACTION",
+        action: action.id,
+        text,
+        highlight: !!settings.highlightEnabled,
+        extraInstruction,
+      },
       (response) => {
         if (!currentPanel || currentPanel !== panel) return;
         if (chrome.runtime.lastError) {
           renderError(panel, chrome.runtime.lastError.message, () =>
-            requestAction(panel, action, text, textbox)
+            requestAction(panel, action, text, textbox, extraInstruction)
           );
           return;
         }
         if (!response?.ok) {
           renderError(panel, response?.error || "Erro desconhecido.", () =>
-            requestAction(panel, action, text, textbox)
+            requestAction(panel, action, text, textbox, extraInstruction)
           );
           return;
         }
-        renderSuggestion(panel, response.text, textbox, action.resultTitle);
+        renderSuggestion(panel, response.text, textbox, action, extraInstruction);
       }
     );
   });

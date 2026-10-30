@@ -85,6 +85,41 @@
   box-sizing: border-box;
 }
 
+#corretor-ortografico-panel .co-extra-prompt {
+  margin-top: 12px;
+}
+
+#corretor-ortografico-panel .co-extra-label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+#corretor-ortografico-panel .co-extra-help {
+  margin-bottom: 6px;
+  color: #aebac1;
+  font-size: 12px;
+}
+
+#corretor-ortografico-panel .co-instruction {
+  width: 100%;
+  min-height: 58px;
+  resize: vertical;
+  background: #2a3942;
+  color: #e9edef;
+  border: 1px solid #3b4a54;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+#corretor-ortografico-panel .co-instruction:focus {
+  outline: 2px solid #00a884;
+  outline-offset: 1px;
+}
+
 #corretor-ortografico-panel .co-actions {
   display: flex;
   justify-content: flex-end;
@@ -116,6 +151,10 @@
 
 #corretor-ortografico-panel .co-btn-secondary:hover {
   background: rgba(233, 237, 239, 0.1);
+}
+
+#corretor-ortografico-panel .co-btn-think {
+  color: #52d9b0;
 }
 
 #corretor-ortografico-panel .co-menu {
